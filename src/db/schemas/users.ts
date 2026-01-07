@@ -16,10 +16,10 @@ export const accountStatusEnum = pgEnum("account_status", [
   "shadowbanned",
 ]);
 
-export const users = pgTable(
+export const usersTable = pgTable(
   "users",
   {
-    id: bigserial("id", { mode: "bigint" }).primaryKey(),
+    id: bigserial("id", { mode: "number" }).primaryKey(),
     username: varchar("username", { length: 32 }).notNull().unique(),
     name: varchar("name", { length: 32 }).notNull(),
     email: varchar("email", { length: 64 }).notNull(),
@@ -29,10 +29,8 @@ export const users = pgTable(
     isPrivate: boolean("is_private").default(false).notNull(),
     isVerified: boolean("is_verified").default(false).notNull(),
     bio: varchar("bio", { length: 240 }),
-    displayPictureUrl: text("display_picture_url"),
-    accountStatus: accountStatusEnum("account_status")
-      .default("active")
-      .notNull(),
+    displayPictureUrl: text("display_picture_url").default(""),
+    accountStatus: accountStatusEnum().default("active").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },

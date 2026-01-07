@@ -1,5 +1,5 @@
 {
-  "id": "77984251-14cc-4ad2-9c9e-dfe2be42dce1",
+  "id": "bdf37065-18ee-441f-ac1a-5b90f8d9e8b5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -74,10 +74,11 @@
           "name": "display_picture_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": "''"
         },
-        "account_status": {
-          "name": "account_status",
+        "accountStatus": {
+          "name": "accountStatus",
           "type": "account_status",
           "typeSchema": "public",
           "primaryKey": false,
