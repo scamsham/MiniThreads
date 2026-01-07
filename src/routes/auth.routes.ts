@@ -27,7 +27,7 @@ authRouter.post(
         .limit(1);
 
       if (!row) {
-        throw new HttpError(404, "User not found", null);
+        throw new HttpError(404, "Invalid credentials", null);
       }
 
       const isPasswordMatch = await bcrypt.compare(password, row?.passwordHash);
@@ -55,7 +55,7 @@ authRouter.post(
   asyncHandler(async (request, response, next) => {
     const parsed = signinSchema.safeParse(request.body);
     if (!parsed.success) {
-      return new HttpError(400, "Bad Request", null);
+      return new HttpError(400, "Bad Request", parsed.error.flatten());
     }
     const {
       name,
@@ -72,41 +72,37 @@ authRouter.post(
     // const passwordHash = password;
 
     const newUser = await db.transaction(async (transaction) => {
-      try {
-        const userExists = await transaction
-          .select()
-          .from(usersTable)
-          .where(
-            or(eq(usersTable.email, email), eq(usersTable.username, username))
-          )
-          .limit(1);
+      const userExists = await transaction
+        .select()
+        .from(usersTable)
+        .where(
+          or(eq(usersTable.email, email), eq(usersTable.username, username))
+        )
+        .limit(1);
 
-        if (userExists.length > 0) {
-          throw new HttpError(409, "User already exists", null);
-        }
-
-        const [inserted] = await transaction
-          .insert(usersTable)
-          .values({
-            name,
-            username,
-            email,
-            passwordHash,
-            address,
-            country,
-            isPrivate,
-            bio,
-          })
-          .returning({
-            id: usersTable.id,
-            username: usersTable.username,
-            email: usersTable.email,
-          });
-
-        return inserted;
-      } catch (error) {
-        throw new HttpError(401, "Invalid user", {});
+      if (userExists.length > 0) {
+        throw new HttpError(409, "User already exists", null);
       }
+
+      const [inserted] = await transaction
+        .insert(usersTable)
+        .values({
+          name,
+          username,
+          email,
+          passwordHash,
+          address,
+          country,
+          isPrivate,
+          bio,
+        })
+        .returning({
+          id: usersTable.id,
+          username: usersTable.username,
+          email: usersTable.email,
+        });
+
+      return inserted;
     });
 
     return response
