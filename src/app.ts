@@ -4,6 +4,7 @@ import { allUsersRouter } from "./routes/all-users.routes";
 import { auth } from "./auth/jwt";
 import { postsRouter } from "./routes/posts.routes";
 import { commentsRouter } from "./routes/comments.routes";
+import { errorMiddleware } from "./middleware/errorMiddleware";
 
 export function createApp() {
   const app = express();
@@ -25,5 +26,6 @@ export function createApp() {
   // seed user endpoint
   app.use("/all-users", allUsersRouter);
 
+  app.use(errorMiddleware);
   return app;
 }
