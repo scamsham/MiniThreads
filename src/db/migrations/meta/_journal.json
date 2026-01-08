@@ -8,6 +8,13 @@
       "when": 1767760234041,
       "tag": "0000_parallel_firestar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1767859560653,
+      "tag": "0001_salty_magma",
+      "breakpoints": true
     }
   ]
 }

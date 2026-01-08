@@ -1,27 +1,34 @@
+import {} from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 import {
   pgTable,
-  bigserial,
-  varchar,
+  integer,
   text,
   timestamp,
   boolean,
   index,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 export const postsTable = pgTable(
   "posts",
   {
-    id: bigserial("id", { mode: "bigint" }).primaryKey(),
-    authorName: varchar("author_name").references(() => usersTable.username, {
-      onDelete: "cascade",
-    }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    authorId: integer("author_id")
+      .notNull()
+      .references(() => usersTable.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+
     content: text("content").notNull(),
     isEdited: boolean("is_edited").default(false),
+
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
   (table) => ({
-    authorNameIdx: index("author_name_idx").on(table.authorName),
+    postsAuthorCreatedIdx: index("posts_author_created_idx").on(table.authorId),
+    postsCreatedIdx: index("posts_created_idx").on(table.createdAt),
   })
 );
