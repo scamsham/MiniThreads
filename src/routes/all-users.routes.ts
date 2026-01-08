@@ -14,6 +14,7 @@ allUsersRouter.get(
     async (request: Request, response: Response, next: NextFunction) => {
       const users = await db
         .select({
+          id: usersTable.id,
           name: usersTable.name,
           username: usersTable.username,
           password: usersTable.passwordHash,
