@@ -6,7 +6,7 @@ import { usersTable } from "../db";
 import { eq, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signJwt } from "../auth/jwt";
-import { loginSchema, signinSchema } from "./auth.validation";
+import { loginSchema, signinSchema } from "../validations/auth.validation";
 
 export const authRouter = Router();
 
@@ -30,7 +30,10 @@ authRouter.post(
         throw new HttpError(404, "Invalid credentials", null);
       }
 
-      const isPasswordMatch = await bcrypt.compare(password, row?.passwordHash);
+      const isPasswordMatch = await bcrypt.compare(
+        password,
+        String(row?.passwordHash)
+      );
 
       if (!isPasswordMatch) {
         throw new HttpError(401, "Invalid credentials", null);
@@ -52,61 +55,65 @@ authRouter.post(
 
 authRouter.post(
   "/sign-in",
-  asyncHandler(async (request, response, next) => {
-    const parsed = signinSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return new HttpError(400, "Bad Request", parsed.error.flatten());
-    }
-    const {
-      name,
-      username,
-      email,
-      password,
-      address,
-      country,
-      isPrivate,
-      bio,
-    } = parsed.data;
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    // const passwordHash = password;
-
-    const newUser = await db.transaction(async (transaction) => {
-      const userExists = await transaction
-        .select()
-        .from(usersTable)
-        .where(
-          or(eq(usersTable.email, email), eq(usersTable.username, username))
-        )
-        .limit(1);
-
-      if (userExists.length > 0) {
-        throw new HttpError(409, "User already exists", null);
+  asyncHandler(
+    async (request: Request, response: Response, next: NextFunction) => {
+      const parsed = signinSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return new HttpError(400, "Bad Request", parsed.error.flatten());
       }
+      const {
+        name,
+        username,
+        email,
+        password,
+        address,
+        country,
+        isPrivate,
+        bio,
+      } = parsed.data;
 
-      const [inserted] = await transaction
-        .insert(usersTable)
-        .values({
-          name,
-          username,
-          email,
-          passwordHash,
-          address,
-          country,
-          isPrivate,
-          bio,
-        })
-        .returning({
-          id: usersTable.id,
-          username: usersTable.username,
-          email: usersTable.email,
-        });
+      const passwordHash = await bcrypt.hash(password, 10);
+      // const passwordHash = password;
 
-      return inserted;
-    });
+      const newUser = await db.transaction(async (transaction) => {
+        // check if user exists
+        const userExists = await transaction
+          .select()
+          .from(usersTable)
+          .where(
+            or(eq(usersTable.email, email), eq(usersTable.username, username))
+          )
+          .limit(1);
 
-    return response
-      .status(201)
-      .json({ message: "User created successfully", user: newUser });
-  })
+        if (userExists.length > 0) {
+          throw new HttpError(409, "User already exists", null);
+        }
+
+        // Insert new user
+        const [inserted] = await transaction
+          .insert(usersTable)
+          .values({
+            name,
+            username,
+            email,
+            passwordHash,
+            address,
+            country,
+            isPrivate,
+            bio,
+          })
+          .returning({
+            id: usersTable.id,
+            username: usersTable.username,
+            email: usersTable.email,
+          });
+
+        return inserted;
+      });
+
+      return response
+        .status(201)
+        .json({ message: "User created successfully", user: newUser });
+    }
+  )
 );
