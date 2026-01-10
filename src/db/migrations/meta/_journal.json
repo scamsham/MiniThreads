@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1767760234041,
-      "tag": "0000_parallel_firestar",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1767859560653,
-      "tag": "0001_salty_magma",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1767883769891,
-      "tag": "0002_neat_stephen_strange",
+      "when": 1768018555951,
+      "tag": "0000_tranquil_forge",
       "breakpoints": true
     }
   ]

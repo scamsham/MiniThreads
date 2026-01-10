@@ -1,16 +1,17 @@
 import { pgTable } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 import { bigint, primaryKey, index, timestamp } from "drizzle-orm/pg-core";
+import { boolean } from "drizzle-orm/pg-core";
 
 export const followersTable = pgTable(
   "followers-followee",
   {
-    followerId: bigint("follower_id", { mode: "bigint" })
+    followerId: bigint("follower_id", { mode: "number" })
       .notNull()
       .references(() => usersTable.id, {
         onDelete: "cascade",
       }),
-    followeeId: bigint("followee_id", { mode: "bigint" })
+    followeeId: bigint("followee_id", { mode: "number" })
       .notNull()
       .references(() => usersTable.id, {
         onDelete: "cascade",

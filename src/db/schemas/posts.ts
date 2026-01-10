@@ -9,6 +9,7 @@ import {
   index,
   uuid,
 } from "drizzle-orm/pg-core";
+import { varchar } from "drizzle-orm/pg-core";
 
 export const postsTable = pgTable(
   "posts",
@@ -20,7 +21,10 @@ export const postsTable = pgTable(
         onDelete: "cascade",
         onUpdate: "cascade",
       }),
-
+    authorUsername: varchar("author_username", { length: 32 }).references(
+      () => usersTable.username,
+      { onDelete: "cascade" }
+    ),
     content: text("content").notNull(),
     isEdited: boolean("is_edited").default(false),
 
