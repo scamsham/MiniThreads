@@ -1,7 +1,6 @@
 import { pgTable } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 import { bigint, primaryKey, index, timestamp } from "drizzle-orm/pg-core";
-import { boolean } from "drizzle-orm/pg-core";
 
 export const followersTable = pgTable(
   "followers-followee",

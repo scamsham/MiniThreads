@@ -5,6 +5,7 @@ import { auth } from "./auth/jwt";
 import { postsRouter } from "./routes/posts.routes";
 import { commentsRouter } from "./routes/comments.routes";
 import { errorMiddleware } from "./middleware/errorMiddleware";
+import { followRouter } from "./routes/follow.routes";
 
 export function createApp() {
   const app = express();
@@ -28,6 +29,7 @@ export function createApp() {
   // Routes
   app.use("/v1/posts", auth, postsRouter);
   app.use("/v1/comments", auth, commentsRouter);
+  app.use("/v1/follow", auth, followRouter);
 
   app.use(errorMiddleware);
   return app;
