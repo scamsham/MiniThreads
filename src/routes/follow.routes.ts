@@ -34,7 +34,7 @@ followRouter.post(
         .returning();
 
       return response.status(201).json({
-        followUser,
+        ...followUser,
       });
     }
   )
