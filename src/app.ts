@@ -29,7 +29,7 @@ export function createApp() {
   // Routes
   app.use("/v1/posts", auth, postsRouter);
   app.use("/v1/comments", auth, commentsRouter);
-  app.use("/v1/follow", followRouter);
+  app.use("/v1/follow", auth, followRouter);
 
   app.use(errorMiddleware);
   return app;
