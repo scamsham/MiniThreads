@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { asyncHandler } from "../lib/async-handler";
 import {
+  deleteCommentParamsSchema,
   getCommentsParamsSchema,
   getQuerySchema,
   postCommentSchema,
@@ -132,6 +133,35 @@ commentsRouter.patch(
 
       response.status(200).json({
         updatedComment,
+      });
+    }
+  )
+);
+
+// delete comment
+commentsRouter.delete(
+  "/:commentId",
+  asyncHandler(
+    async (request: Request, response: Response, next: NextFunction) => {
+      const userId = request.user?.userId;
+      if (!userId) {
+        throw new HttpError(401, "Invalid credentials", {});
+      }
+
+      const parsedParams = deleteCommentParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        throw new HttpError(400, "Bad request", {});
+      }
+
+      const { commentId } = parsedParams.data;
+
+      const [deletedComment] = await db
+        .delete(commentsTable)
+        .where(eq(commentsTable.id, commentId))
+        .returning();
+
+      return response.status(200).json({
+        deletedComment,
       });
     }
   )

@@ -23,3 +23,7 @@ export const updateCommentSchema = z.object({
 export const updateCommentQuerySchema = z.object({
   commentId: z.uuid(),
 });
+
+export const deleteCommentParamsSchema = z.object({
+  commentId: z.uuid(),
+});
