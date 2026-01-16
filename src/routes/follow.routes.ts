@@ -1,16 +1,15 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { asyncHandler } from "../lib/async-handler";
-import z from "zod";
 import { HttpError } from "../middleware/errorMiddleware";
 import { db } from "../db/client";
 import { followersTable } from "../db";
 import { and, eq } from "drizzle-orm";
+import {
+  deleteFolloweeSchema,
+  followUserSchema,
+} from "../validations/follow.validation";
 
 export const followRouter = Router();
-
-export const followUserSchema = z.object({
-  followeeId: z.coerce.number(),
-});
 
 // get followers list
 followRouter.get(
@@ -62,10 +61,6 @@ followRouter.post(
     }
   )
 );
-
-export const deleteFolloweeSchema = z.object({
-  followeeId: z.coerce.number(),
-});
 
 // UserId unfollowers followeeId
 followRouter.delete(
