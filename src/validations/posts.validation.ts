@@ -13,3 +13,7 @@ export const postPostsSchema = z.object({
   content: z.string().min(6).max(16384),
   isEdited: z.boolean().optional(),
 });
+
+export const deletePostParamsSchema = z.object({
+  postId: z.uuid(),
+});
