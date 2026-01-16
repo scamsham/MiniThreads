@@ -15,3 +15,15 @@ export const postCommentSchema = z.object({
   comment: z.string().min(6).max(8192),
   parentCommentId: z.uuidv4().optional(),
 });
+
+export const updateCommentSchema = z.object({
+  comment: z.string(),
+});
+
+export const updateCommentQuerySchema = z.object({
+  commentId: z.uuid(),
+});
+
+export const deleteCommentParamsSchema = z.object({
+  commentId: z.uuid(),
+});

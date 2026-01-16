@@ -1,9 +1,12 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { asyncHandler } from "../lib/async-handler";
 import {
+  deleteCommentParamsSchema,
   getCommentsParamsSchema,
   getQuerySchema,
   postCommentSchema,
+  updateCommentQuerySchema,
+  updateCommentSchema,
 } from "../validations/comments.validation";
 import { HttpError } from "../middleware/errorMiddleware";
 import { decodeCursor, encodeCursor } from "../lib/encode-decode";
@@ -92,6 +95,73 @@ commentsRouter.post(
 
       response.status(200).json({
         comment: newComment,
+      });
+    }
+  )
+);
+
+commentsRouter.patch(
+  "/:commentId",
+  asyncHandler(
+    async (request: Request, response: Response, next: NextFunction) => {
+      const userId = request.user?.userId;
+      if (!userId) {
+        throw new HttpError(401, "invalid credentials", {});
+      }
+      const parsedParams = updateCommentQuerySchema.safeParse(request.params);
+      const parsedBody = updateCommentSchema.safeParse(request.body);
+      if (!parsedBody.success || !parsedParams.success) {
+        throw new HttpError(400, "Bad request", {});
+      }
+      const { commentId } = parsedParams.data;
+      const { comment } = parsedBody.data;
+
+      const [updatedComment] = await db
+        .update(commentsTable)
+        .set({
+          comment: comment,
+          isEdited: true,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(commentsTable.id, commentId),
+            eq(commentsTable.authorId, userId)
+          )
+        )
+        .returning();
+
+      response.status(200).json({
+        updatedComment,
+      });
+    }
+  )
+);
+
+// delete comment
+commentsRouter.delete(
+  "/:commentId",
+  asyncHandler(
+    async (request: Request, response: Response, next: NextFunction) => {
+      const userId = request.user?.userId;
+      if (!userId) {
+        throw new HttpError(401, "Invalid credentials", {});
+      }
+
+      const parsedParams = deleteCommentParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        throw new HttpError(400, "Bad request", {});
+      }
+
+      const { commentId } = parsedParams.data;
+
+      const [deletedComment] = await db
+        .delete(commentsTable)
+        .where(eq(commentsTable.id, commentId))
+        .returning();
+
+      return response.status(200).json({
+        deletedComment,
       });
     }
   )

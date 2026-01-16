@@ -1,16 +1,15 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { asyncHandler } from "../lib/async-handler";
-import z from "zod";
 import { HttpError } from "../middleware/errorMiddleware";
 import { db } from "../db/client";
 import { followersTable } from "../db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import {
+  deleteFolloweeSchema,
+  followUserSchema,
+} from "../validations/follow.validation";
 
 export const followRouter = Router();
-
-export const followUserSchema = z.object({
-  followeeId: z.coerce.number(),
-});
 
 // get followers list
 followRouter.get(
@@ -19,7 +18,7 @@ followRouter.get(
     async (request: Request, response: Response, next: NextFunction) => {
       const userId = request.user?.userId;
       if (!userId) {
-        throw new HttpError(401, "Invalid credentials", {});
+        throw new HttpError(401, "Missing token", {});
       }
       const following = await db
         .select({
@@ -58,6 +57,38 @@ followRouter.post(
 
       return response.status(201).json({
         ...followUser,
+      });
+    }
+  )
+);
+
+// UserId unfollowers followeeId
+followRouter.delete(
+  "/:followeeId",
+  asyncHandler(
+    async (reqeuest: Request, response: Response, next: NextFunction) => {
+      const userId = reqeuest.user?.userId;
+      if (!userId) {
+        throw new HttpError(401, "Missing token", {});
+      }
+      const parsedParams = deleteFolloweeSchema.safeParse(reqeuest.params);
+      if (!parsedParams.success) {
+        throw new HttpError(400, "Bad Request", {});
+      }
+      const { followeeId } = parsedParams.data;
+
+      const [deletedRelationship] = await db
+        .delete(followersTable)
+        .where(
+          and(
+            eq(followersTable.followerId, userId),
+            eq(followersTable.followeeId, followeeId)
+          )
+        )
+        .returning();
+
+      response.status(204).json({
+        deletedRelationship,
       });
     }
   )

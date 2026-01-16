@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from "express";
 import { asyncHandler } from "../lib/async-handler";
 import { HttpError } from "../middleware/errorMiddleware";
 import {
+  deletePostParamsSchema,
   getPostsParamsSchema,
   getPostsQuerySchema,
   postPostsSchema,
@@ -11,6 +12,7 @@ import { postsTable } from "../db";
 import { and, desc, eq } from "drizzle-orm";
 import { decodeCursor, encodeCursor } from "../lib/encode-decode";
 import { lt } from "drizzle-orm";
+import z from "zod";
 
 export const postsRouter = Router();
 
@@ -101,6 +103,71 @@ postsRouter.post(
 
       return response.status(201).json({
         post: newPost,
+      });
+    }
+  )
+);
+
+export const patchQuerySchema = z.object({
+  content: z.coerce.string(),
+});
+
+postsRouter.patch(
+  "/",
+  asyncHandler(
+    async (request: Request, response: Response, next: NextFunction) => {
+      const userId = request.user?.userId;
+      if (!userId) {
+        throw new HttpError(401, "Invalid credentials", {});
+      }
+
+      const parsedBody = patchQuerySchema.safeParse(request.body);
+      if (!parsedBody.success) {
+        throw new HttpError(400, "Bad request", {});
+      }
+
+      const { content } = parsedBody.data;
+
+      console.log(content);
+      const [updatePost] = await db
+        .update(postsTable)
+        .set({
+          content: content,
+          isEdited: true,
+        })
+        .returning();
+
+      response.status(200).json({
+        updatePost,
+      });
+    }
+  )
+);
+
+// deletes post
+postsRouter.delete(
+  "/:postId",
+  asyncHandler(
+    async (request: Request, response: Response, next: NextFunction) => {
+      const userId = request.user?.userId;
+      if (!userId) {
+        throw new HttpError(401, "Invalid credentials", {});
+      }
+
+      const parsedParams = deletePostParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        throw new HttpError(400, "Bad request", {});
+      }
+
+      const { postId } = parsedParams.data;
+
+      const [deletedComment] = await db
+        .delete(postsTable)
+        .where(eq(postsTable.id, postId))
+        .returning();
+
+      return response.status(200).json({
+        deletedComment,
       });
     }
   )
