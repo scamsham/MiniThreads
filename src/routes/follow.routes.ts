@@ -1,95 +1,115 @@
 import { NextFunction, Request, Response, Router } from "express";
+import { and, eq } from "drizzle-orm";
 import { asyncHandler } from "../lib/async-handler";
 import { HttpError } from "../middleware/errorMiddleware";
 import { db } from "../db/client";
-import { followersTable } from "../db";
-import { and, eq } from "drizzle-orm";
-import {
-  deleteFolloweeSchema,
-  followUserSchema,
-} from "../validations/follow.validation";
+import { followsTable } from "../db"; // renamed
+import { z } from "zod";
 
 export const followRouter = Router();
 
-// get followers list
+const followeeParamSchema = z.object({
+  followeeId: z.coerce.number().int().positive(),
+});
+
+// Who I follow
 followRouter.get(
-  "/",
-  asyncHandler(
-    async (request: Request, response: Response, next: NextFunction) => {
-      const userId = request.user?.userId;
-      if (!userId) {
-        throw new HttpError(401, "Missing token", {});
-      }
-      const following = await db
-        .select({
-          followeeId: followersTable.followeeId,
-          createdAt: followersTable.createdAt,
-        })
-        .from(followersTable)
-        .where(eq(followersTable.followerId, userId));
+  "/following",
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new HttpError(401, "Missing token", null);
 
-      return response.status(200).json([...following]);
-    }
-  )
+    const rows = await db
+      .select({
+        followeeId: followsTable.followeeId,
+        createdAt: followsTable.createdAt,
+      })
+      .from(followsTable)
+      .where(eq(followsTable.followerId, userId));
+
+    return res.status(200).json({ data: rows });
+  })
 );
 
+// Who follows me
+followRouter.get(
+  "/followers",
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new HttpError(401, "Missing token", null);
+
+    const rows = await db
+      .select({
+        followerId: followsTable.followerId,
+        createdAt: followsTable.createdAt,
+      })
+      .from(followsTable)
+      .where(eq(followsTable.followeeId, userId));
+
+    return res.status(200).json({ data: rows });
+  })
+);
+
+// Follow a user
 followRouter.post(
-  "/",
-  asyncHandler(
-    async (request: Request, response: Response, next: NextFunction) => {
-      const userId = request.user?.userId;
-      if (!userId) {
-        throw new HttpError(401, "Invalid credentials", {});
-      }
-      const parsedBody = followUserSchema.safeParse(request.body);
-      if (!parsedBody.success) {
-        throw new HttpError(400, "Bad request", {});
-      }
-      const { followeeId } = parsedBody.data;
+  "/:followeeId",
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new HttpError(401, "Missing token", null);
 
-      const [followUser] = await db
-        .insert(followersTable)
-        .values({
-          followerId: userId,
-          followeeId: followeeId,
-        })
-        .returning();
+    const parsed = followeeParamSchema.safeParse(req.params);
+    if (!parsed.success)
+      throw new HttpError(400, "Bad request", parsed.error.flatten());
 
-      return response.status(201).json({
-        ...followUser,
-      });
+    const followeeId = parsed.data.followeeId;
+
+    if (followeeId === userId) {
+      throw new HttpError(400, "You cannot follow yourself", null);
     }
-  )
+
+    // Avoid blowing up on duplicate follow: do nothing if exists
+    const [row] = await db
+      .insert(followsTable)
+      .values({ followerId: userId, followeeId })
+      // Drizzle supports onConflictDoNothing for pg:
+      .onConflictDoNothing()
+      .returning();
+
+    // If it already existed, row will be undefined
+    return res.status(201).json({
+      data: row ?? { followerId: userId, followeeId, createdAt: null },
+      meta: { created: !!row },
+    });
+  })
 );
 
-// UserId unfollowers followeeId
+// Unfollow
 followRouter.delete(
   "/:followeeId",
-  asyncHandler(
-    async (reqeuest: Request, response: Response, next: NextFunction) => {
-      const userId = reqeuest.user?.userId;
-      if (!userId) {
-        throw new HttpError(401, "Missing token", {});
-      }
-      const parsedParams = deleteFolloweeSchema.safeParse(reqeuest.params);
-      if (!parsedParams.success) {
-        throw new HttpError(400, "Bad Request", {});
-      }
-      const { followeeId } = parsedParams.data;
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) throw new HttpError(401, "Missing token", null);
 
-      const [deletedRelationship] = await db
-        .delete(followersTable)
-        .where(
-          and(
-            eq(followersTable.followerId, userId),
-            eq(followersTable.followeeId, followeeId)
-          )
+    const parsed = followeeParamSchema.safeParse(req.params);
+    if (!parsed.success)
+      throw new HttpError(400, "Bad request", parsed.error.flatten());
+
+    const followeeId = parsed.data.followeeId;
+
+    const [deleted] = await db
+      .delete(followsTable)
+      .where(
+        and(
+          eq(followsTable.followerId, userId),
+          eq(followsTable.followeeId, followeeId)
         )
-        .returning();
-
-      response.status(204).json({
-        deletedRelationship,
+      )
+      .returning({
+        followerId: followsTable.followerId,
+        followeeId: followsTable.followeeId,
       });
-    }
-  )
+
+    // 204 = no body. If you want to return deleted info, use 200.
+    return res.status(200).json({ deleted });
+  })
 );
