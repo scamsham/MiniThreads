@@ -6,6 +6,7 @@ import { postsRouter } from "./routes/posts.routes";
 import { commentsRouter } from "./routes/comments.routes";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { followRouter } from "./routes/follow.routes";
+import { feedRouter } from "./routes/feed.routes";
 
 export function createApp() {
   const app = express();
@@ -30,6 +31,7 @@ export function createApp() {
   app.use("/v1/posts", auth, postsRouter);
   app.use("/v1/comments", auth, commentsRouter);
   app.use("/v1/follow", auth, followRouter);
+  app.use("/v1/feed", auth, feedRouter);
 
   app.use(errorMiddleware);
   return app;
