@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { asyncHandler } from "../lib/async-handler";
 import { HttpError } from "../middleware/errorMiddleware";
 import { db } from "../db/client";
-import { followsTable } from "../db"; // renamed
+import { followsTable } from "../db";
 import { z } from "zod";
 
 export const followRouter = Router();
@@ -17,7 +17,7 @@ followRouter.get(
   "/following",
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId) throw new HttpError(401, "Missing token", null);
+    if (!userId) throw new HttpError(401, "Invalid credentials", null);
 
     const rows = await db
       .select({
@@ -36,7 +36,7 @@ followRouter.get(
   "/followers",
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId) throw new HttpError(401, "Missing token", null);
+    if (!userId) throw new HttpError(401, "Invalid credentials", null);
 
     const rows = await db
       .select({
@@ -55,29 +55,33 @@ followRouter.post(
   "/:followeeId",
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId) throw new HttpError(401, "Missing token", null);
+    if (!userId) throw new HttpError(401, "Invalid credentials", null);
 
     const parsed = followeeParamSchema.safeParse(req.params);
-    if (!parsed.success)
+    if (!parsed.success) {
       throw new HttpError(400, "Bad request", parsed.error.flatten());
+    }
 
     const followeeId = parsed.data.followeeId;
 
     if (followeeId === userId) {
-      throw new HttpError(400, "You cannot follow yourself", null);
+      throw new HttpError(400, "Why you so self obsessed?", null);
     }
 
     // Avoid blowing up on duplicate follow: do nothing if exists
     const [row] = await db
       .insert(followsTable)
       .values({ followerId: userId, followeeId })
-      // Drizzle supports onConflictDoNothing for pg:
       .onConflictDoNothing()
-      .returning();
+      .returning({
+        followerId: followsTable.followerId,
+        followeeId: followsTable.followeeId,
+        createdAt: followsTable.createdAt,
+      });
 
     // If it already existed, row will be undefined
     return res.status(201).json({
-      data: row ?? { followerId: userId, followeeId, createdAt: null },
+      data: row,
       meta: { created: !!row },
     });
   })
@@ -88,12 +92,12 @@ followRouter.delete(
   "/:followeeId",
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId) throw new HttpError(401, "Missing token", null);
+    if (!userId) throw new HttpError(401, "Invalid credentials", null);
 
     const parsed = followeeParamSchema.safeParse(req.params);
-    if (!parsed.success)
+    if (!parsed.success) {
       throw new HttpError(400, "Bad request", parsed.error.flatten());
-
+    }
     const followeeId = parsed.data.followeeId;
 
     const [deleted] = await db
@@ -109,7 +113,6 @@ followRouter.delete(
         followeeId: followsTable.followeeId,
       });
 
-    // 204 = no body. If you want to return deleted info, use 200.
     return res.status(200).json({ deleted });
   })
 );
