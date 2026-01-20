@@ -19,9 +19,11 @@ export async function cacheGetOrSetJson<T>(
   ttlSeconds: number,
   fetcher: () => Promise<T>
 ): Promise<{ value: T; hit: boolean }> {
+  // Check for the key in cache
   const cached = await cacheGetJson<T>(key);
   if (cached !== null) return { value: cached, hit: true };
 
+  // on cache miss we need a call to db to fetch the data
   const value = await fetcher();
   await cacheSetJson(key, value, ttlSeconds);
   return { value, hit: false };
