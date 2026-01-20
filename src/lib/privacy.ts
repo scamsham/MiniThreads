@@ -5,6 +5,10 @@ import { cacheGetOrSetJson } from "../infra/redis/cache";
 
 type PrivacyFlag = { isPrivate: boolean };
 
+/*
+Note to self: Caching private content on cache is dangerous as it may lead to data leaks.
+So we cache permission flags only, never the actual content.
+*/
 export async function canViewUserContent(
   viewerId: number,
   ownerId: number
