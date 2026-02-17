@@ -12,7 +12,7 @@ Goal: cement core backend concepts by building a Threads-like API (posts, commen
 - ✅ Users + Auth (JWT Access + Refresh, refresh rotation)
 - ✅ Posts + Comments (replies)
 - ✅ Follow graph + Feed (cursor pagination)
-- ⏳ Caching (Redis, cache-aside)
+- ✅ Caching (Redis, cache-aside)
 - ⏳ Background jobs (Kafka workers, retries, DLQ)
 - ⏳ Transactional emails (job-driven)
 - ⏳ Object storage (MinIO, presigned uploads)
